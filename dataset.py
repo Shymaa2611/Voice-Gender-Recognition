@@ -4,12 +4,16 @@ import torch
 from datasets import  Dataset
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
-
+from transformers import Wav2Vec2Processor, Wav2Vec2Model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     return dataset
 
 def extract_wav2vec_features(batch):
+    processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
+    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
+
     audio_dicts = batch['audio']  
     processor = processor
     model=model
