@@ -11,6 +11,8 @@ def load_data():
 
 def extract_wav2vec_features(batch):
     audio_dicts = batch['audio']  
+    processor = processor
+    model=model
     features = []
     for audio_dict in audio_dicts:
         if isinstance(audio_dict, dict):
