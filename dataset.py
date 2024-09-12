@@ -6,6 +6,7 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Step 1: Load data
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     train_subset = dataset['train'].select(range(5))
@@ -16,6 +17,7 @@ def load_data():
     })
     return subset_dataset
 
+# Step 2: Extract Wav2Vec2 features
 def extract_wav2vec_features(batch):
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
@@ -37,28 +39,40 @@ def extract_wav2vec_features(batch):
     # Return the extracted features as a new column in the dataset
     return {'features': features}
 
+# Step 3: Apply changes and verify features
 def apply_change():
     dataset = load_data()
-    
+
     # Ensure the 'features' column is added to the dataset
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
+
+    # Debugging: Check if features are added to the dataset
+    print("Columns after feature extraction:", dataset['train'].column_names)
     
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
+    
     return label_to_id, dataset
 
+# Step 4: Label conversion
 def label_to_int(batch, label_to_id):
     unknown_label = -1  
     batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
     return batch
 
+# Step 5: Final dataset with features and integer labels
 def final_dataset():
     label_to_id, dataset = apply_change()
     
     # Map labels to integers
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
+    
+    # Debugging: Verify that the 'features' column exists in the final dataset
+    print("Final columns in dataset:", dataset['train'].column_names)
+    
     return dataset
 
+# Step 6: Dataset class
 class AudioDataset(Dataset):
     def __init__(self, data):
         # Check if the 'features' column exists and stack the features into a tensor
@@ -75,6 +89,7 @@ class AudioDataset(Dataset):
         return {'features': self.features[idx].to(device),
                 'label': self.labels[idx].to(device)}
 
+# Step 7: DataLoader setup
 def get_loaders():
     dataset = final_dataset()
     train_data = AudioDataset(dataset['train'])
@@ -83,4 +98,3 @@ def get_loaders():
     test_loader = DataLoader(test_data, batch_size=32)
     input_dim = train_data.features.shape[1]  # Get the feature dimension
     return input_dim, train_loader, test_loader
-
