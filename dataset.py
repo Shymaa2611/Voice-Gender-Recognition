@@ -18,12 +18,22 @@ def extract_mfcc_features(batch):
         
         # Extract MFCC features using librosa
         mfccs = librosa.feature.mfcc(y=waveform, sr=sampling_rate, n_mfcc=13)  # Adjust n_mfcc as needed
-        # Transpose and pad/truncate features
+        # Transpose features to have shape (frames, n_mfcc)
         mfccs = mfccs.T
         
-        features.append(mfccs)
+        # Determine the maximum length for padding/truncating
+        max_length = 160  # Adjust this length as needed
+        
+        if mfccs.shape[0] < max_length:
+            # Pad features if they are shorter than the maximum length
+            padded_mfccs = np.pad(mfccs, ((0, max_length - mfccs.shape[0]), (0, 0)), mode='constant')
+        else:
+            # Truncate features if they are longer than the maximum length
+            padded_mfccs = mfccs[:max_length, :]
+        
+        features.append(padded_mfccs)
     
-    features_array = np.array([np.pad(f, ((0, 160 - f.shape[0]), (0, 0)), mode='constant') for f in features])  # Pad/truncate to a fixed length
+    features_array = np.array(features)
     return {'features': features_array}
 
 def apply_change():
@@ -69,5 +79,5 @@ def get_loaders():
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32)
-    input_dim = train_data.features.shape[1]  # This should be the length of the MFCC features
+    input_dim = train_data.features.shape[1] 
     return input_dim, train_loader, test_loader
