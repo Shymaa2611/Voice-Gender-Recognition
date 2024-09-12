@@ -42,22 +42,24 @@ def apply_change():
     dataset = load_data()
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
     
+    # Define and print label mapping
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
+    print(f"Label to ID mapping: {label_to_id}")
     
     return label_to_id, dataset
 
 def label_to_int(batch, label_to_id):
     unknown_label = -1
+    # Ensure all labels are in the label_to_id mapping
     batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
     # Ensure labels are binary
     batch['label'] = [1 if l > 0 else 0 for l in batch['label']]
     return batch
-
 def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
-    
+
     # Debug: Print unique labels to ensure they're binary
     unique_labels_train = set(dataset['train']['label'])
     unique_labels_test = set(dataset['test']['label'])
