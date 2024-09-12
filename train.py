@@ -13,12 +13,15 @@ def train():
 
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)  # Adjusted learning rate
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
     num_epochs = 100
+    best_val_accuracy = 0.0
+    patience = 10  # Early stopping patience
+    patience_counter = 0
 
     for epoch in range(num_epochs):
         model.train()
@@ -52,7 +55,7 @@ def train():
                 outputs = model(X_batch)
                 loss = criterion(outputs.view(-1), y_batch.float())
                 running_val_loss += loss.item()
-                preds = torch.round(torch.sigmoid(outputs))  # Apply sigmoid for logits
+                preds = torch.round(torch.sigmoid(outputs))
                 val_correct_preds += (preds.view_as(y_batch) == y_batch).sum().item()
 
         val_loss = running_val_loss / len(val_loader)
@@ -67,6 +70,16 @@ def train():
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
+
+        # Early stopping
+        if val_accuracy > best_val_accuracy:
+            best_val_accuracy = val_accuracy
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print("Early stopping triggered.")
+                break
     
     return train_losses, val_losses, train_accuracies, val_accuracies
 
