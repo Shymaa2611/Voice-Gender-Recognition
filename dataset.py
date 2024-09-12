@@ -10,8 +10,8 @@ def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     
     # Select only 'audio' and 'label' columns and remove the 'id' column
-    train_subset = dataset['train'].remove_columns(['id'])
-    test_subset = dataset['test'].remove_columns(['id'])
+    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # Select only 5 rows for training
+    test_subset = dataset['test'].remove_columns(['id']).select(range(2))   # Select only 2 rows for testing
     
     subset_dataset = DatasetDict({
         'train': train_subset,
