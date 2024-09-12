@@ -1,8 +1,8 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from datasets import load_dataset, DatasetDict
-from transformers import Wav2Vec2Processor, Wav2Vec2Model
 import numpy as np
+import librosa
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -10,30 +10,25 @@ def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     return dataset
 
-def extract_wav2vec_features(batch):
-    processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
-    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
-
+def extract_mfcc_features(batch):
     features = []
     for audio_dict in batch['audio']:
         waveform = audio_dict['array']
         sampling_rate = audio_dict['sampling_rate']
         
-        inputs = processor(waveform, sampling_rate=sampling_rate, return_tensors="pt", padding=True, truncation=True, max_length=160000)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        # Extract MFCC features using librosa
+        mfccs = librosa.feature.mfcc(y=waveform, sr=sampling_rate, n_mfcc=13)  # Adjust n_mfcc as needed
+        # Transpose and pad/truncate features
+        mfccs = mfccs.T
         
-        with torch.no_grad():
-            outputs = model(**inputs)
-        
-        feature = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-        features.append(feature)
+        features.append(mfccs)
     
-    features_array = np.vstack(features)
+    features_array = np.array([np.pad(f, ((0, 160 - f.shape[0]), (0, 0)), mode='constant') for f in features])  # Pad/truncate to a fixed length
     return {'features': features_array}
 
 def apply_change():
     dataset = load_data()
-    dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
+    dataset = dataset.map(extract_mfcc_features, batched=True, batch_size=8)
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
     
@@ -74,5 +69,5 @@ def get_loaders():
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32)
-    input_dim = train_data.features.shape[1] 
+    input_dim = train_data.features.shape[1]  # This should be the length of the MFCC features
     return input_dim, train_loader, test_loader
