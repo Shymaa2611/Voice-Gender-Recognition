@@ -6,13 +6,13 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Step 1: Load data with only 'audio' and 'label' columns
 def load_data():
+    # Load the dataset
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     
-    # Select only 'audio' and 'label' columns
-    train_subset = dataset['train'].select(range(5)).remove_columns([col for col in dataset['train'].column_names if col not in ['audio', 'label']])
-    test_subset = dataset['test'].select(range(2)).remove_columns([col for col in dataset['test'].column_names if col not in ['audio', 'label']])
+    # Remove the 'id' column and select a subset
+    train_subset = dataset['train'].select(range(5)).remove_columns(['id'])
+    test_subset = dataset['test'].select(range(2)).remove_columns(['id'])
     
     subset_dataset = DatasetDict({
         'train': train_subset,
@@ -20,8 +20,8 @@ def load_data():
     })
     return subset_dataset
 
-# Step 2: Extract Wav2Vec2 features
 def extract_wav2vec_features(batch):
+    # Initialize processor and model
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
 
@@ -30,6 +30,7 @@ def extract_wav2vec_features(batch):
         waveform = audio_dict['array']
         sampling_rate = audio_dict['sampling_rate']
         
+        # Process audio and get features
         inputs = processor(waveform, sampling_rate=sampling_rate, return_tensors="pt", padding=True, truncation=True, max_length=160000)
         inputs = {k: v.to(device) for k, v in inputs.items()}
         
@@ -38,18 +39,17 @@ def extract_wav2vec_features(batch):
         
         feature = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
         features.append(feature)
-
-    # Return the extracted features as a new column in the dataset
+    
+    # Return features as a list
     return {'features': features}
 
-# Step 3: Apply changes and ensure dataset contains 'audio', 'label', 'features'
 def apply_change():
     dataset = load_data()
-
-    # Apply feature extraction and keep only the 'audio', 'label', and 'features' columns
+    
+    # Apply feature extraction
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
     
-    # Debugging: Check if features are added to the dataset
+    # Verify columns after feature extraction
     print("Columns after feature extraction:", dataset['train'].column_names)
     
     label_list = sorted(set(dataset['train']['label']))
@@ -57,33 +57,35 @@ def apply_change():
     
     return label_to_id, dataset
 
-# Step 4: Label conversion
 def label_to_int(batch, label_to_id):
     unknown_label = -1  
     batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
     return batch
 
-# Step 5: Final dataset with features and integer labels
 def final_dataset():
     label_to_id, dataset = apply_change()
     
-    # Map labels to integers
+    # Map label to int
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
     
-    # Debugging: Verify final columns in dataset
+    # Verify final columns in dataset
     print("Final columns in dataset:", dataset['train'].column_names)
     
     return dataset
 
-# Step 6: Dataset class
 class AudioDataset(Dataset):
     def __init__(self, data):
-        # Check if the 'features' column exists and stack the features into a tensor
+        # Ensure 'features' column exists
         if 'features' in data:
             self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
         else:
             raise KeyError("'features' column is missing in the dataset.")
-        self.labels = torch.tensor(data['label'], dtype=torch.long)
+        
+        # Ensure 'label' column exists
+        if 'label' in data:
+            self.labels = torch.tensor(data['label'], dtype=torch.long)
+        else:
+            raise KeyError("'label' column is missing in the dataset.")
         
     def __len__(self):
         return len(self.features)
@@ -92,7 +94,6 @@ class AudioDataset(Dataset):
         return {'features': self.features[idx].to(device),
                 'label': self.labels[idx].to(device)}
 
-# Step 7: DataLoader setup
 def get_loaders():
     dataset = final_dataset()
     train_data = AudioDataset(dataset['train'])
