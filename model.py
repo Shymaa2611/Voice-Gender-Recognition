@@ -1,5 +1,9 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+import matplotlib.pyplot as plt
+import os
 
 class SGR(nn.Module):
     def __init__(self, input_dim):
@@ -32,3 +36,4 @@ class SGR(nn.Module):
 
     def forward(self, X):
         return self.model(X)
+

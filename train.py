@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 from args import *  # Make sure to define or import `SGR`, `save_checkpoint`, etc.
 from utils import save_checkpoint
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -13,14 +14,14 @@ def train():
 
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)  # Adjusted learning rate and added weight decay
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)  # Learning rate scheduler
+    optimizer = optim.AdamW(model.parameters(), lr=0.0001)  # Changed to AdamW
+    scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
     num_epochs = 100
-    best_val_loss = float('inf')  # Initialize best_val_loss to a very high value
+    best_val_accuracy = 0.0
     patience = 10  # Early stopping patience
     patience_counter = 0
 
@@ -76,15 +77,15 @@ def train():
         scheduler.step(val_loss)
 
         # Early stopping
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        if val_accuracy > best_val_accuracy:
+            best_val_accuracy = val_accuracy
             patience_counter = 0
         else:
             patience_counter += 1
             if patience_counter >= patience:
                 print("Early stopping triggered.")
                 break
-
+    
     return train_losses, val_losses, train_accuracies, val_accuracies
 
 def training_plots(train_losses, val_losses, train_accuracies, val_accuracies):
