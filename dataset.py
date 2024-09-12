@@ -7,6 +7,7 @@ import librosa
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
+    # Load the entire dataset
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     return dataset
 
@@ -51,17 +52,13 @@ def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
 
-    # Take 5 samples from training and 2 samples from test
-    train_subset = dataset['train'].select(range(min(5, len(dataset['train']))))
-    test_subset = dataset['test'].select(range(min(2, len(dataset['test']))))
-
-    # Create new DatasetDict with the smaller subsets
-    subset_dataset = DatasetDict({
-        'train': train_subset,
-        'test': test_subset
+    # Use the entire dataset for both training and testing
+    full_dataset = DatasetDict({
+        'train': dataset['train'],
+        'test': dataset['test']
     })
 
-    return subset_dataset
+    return full_dataset
 
 class AudioDataset(Dataset):
     def __init__(self, data):
@@ -86,15 +83,14 @@ class AudioDataset(Dataset):
             'label': self.labels[idx].to(device)
         }
 
-def get_loaders():
+def get_loaders(batch_size=32):
     dataset = final_dataset()
     train_data = AudioDataset(dataset['train'])
     test_data = AudioDataset(dataset['test'])
     
-    # Adjust batch size according to the small dataset size (5 for train, 2 for test)
-    train_loader = DataLoader(train_data, batch_size=5, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=2)
+    # Adjust batch size for entire dataset
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=batch_size)
     
     input_dim = train_data.features.shape[1]
     return input_dim, train_loader, test_loader
-
