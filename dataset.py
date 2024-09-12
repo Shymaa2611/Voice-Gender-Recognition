@@ -20,51 +20,48 @@ def extract_wav2vec_features(batch):
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
 
-    audio_dicts = batch['audio']
     features = []
-    for audio_dict in audio_dicts:
-        if isinstance(audio_dict, dict):
-            waveform = audio_dict.get('array', None)
-            sampling_rate = audio_dict.get('sampling_rate', None)
-            if waveform is not None and sampling_rate is not None:
-                inputs = processor(waveform, sampling_rate=sampling_rate, return_tensors="pt", padding=True, truncation=True, max_length=160000)
-                inputs = {k: v.to(device) for k, v in inputs.items()}
-                
-                with torch.no_grad():
-                    outputs = model(**inputs)
-                feature = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
-                features.append(feature)
-            else:
-                print("Missing waveform or sampling rate in audio_dict")
-        else:
-            print("Unexpected format for audio_dict:", type(audio_dict))
-    return {'features': np.array(features)}
+    for audio_dict in batch['audio']:
+        waveform = audio_dict['array']
+        sampling_rate = audio_dict['sampling_rate']
+        
+        inputs = processor(waveform, sampling_rate=sampling_rate, return_tensors="pt", padding=True, truncation=True, max_length=160000)
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        
+        with torch.no_grad():
+            outputs = model(**inputs)
+        
+        feature = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
+        features.append(feature)
+
+    # Return the extracted features as a new column in the dataset
+    return {'features': features}
 
 def apply_change():
     dataset = load_data()
-    dataset = dataset.map(extract_wav2vec_features, batched=True)
+    
+    # Ensure the 'features' column is added to the dataset
+    dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
+    
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
-    return label_to_id
+    return label_to_id, dataset
 
-def label_to_int(batch):
-    label_to_id = apply_change()
+def label_to_int(batch, label_to_id):
     unknown_label = -1  
-    if isinstance(batch['label'], list):
-        batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
-    else:
-        batch['label'] = label_to_id.get(batch['label'], unknown_label)
-    
+    batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
     return batch
 
 def final_dataset():
-    dataset = load_data()
-    dataset = dataset.map(label_to_int)
+    label_to_id, dataset = apply_change()
+    
+    # Map labels to integers
+    dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
     return dataset
 
 class AudioDataset(Dataset):
     def __init__(self, data):
-        # Add a check for the features column
+        # Check if the 'features' column exists and stack the features into a tensor
         if 'features' in data:
             self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
         else:
@@ -84,5 +81,6 @@ def get_loaders():
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32)
-    dim = 54614  
-    return dim, train_loader, test_loader
+    input_dim = train_data.features.shape[1]  # Get the feature dimension
+    return input_dim, train_loader, test_loader
+
