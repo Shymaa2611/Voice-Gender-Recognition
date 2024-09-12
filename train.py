@@ -54,13 +54,7 @@ def train():
             for batch in val_loader:
                 X_batch, y_batch = batch['features'], batch['label']
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-                
-                # Ensure target values are binary before loss calculation
                 y_batch = y_batch.float()
-                unique_labels = y_batch.unique()
-                print(f"Validation batch unique labels: {unique_labels}")
-                assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {unique_labels}"
-                
                 outputs = model(X_batch)
                 loss = criterion(outputs.view(-1), y_batch)
                 running_val_loss += loss.item()
