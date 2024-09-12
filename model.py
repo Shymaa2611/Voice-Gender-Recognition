@@ -16,4 +16,6 @@ class SGR(nn.Module):
         )
 
     def forward(self, X):
+        # Flatten the input to match the expected input dimension
+        X = X.view(X.size(0), -1)  # Flatten (batch_size, time_steps, n_mfcc) to (batch_size, input_dim)
         return self.model(X)
