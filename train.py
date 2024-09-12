@@ -12,14 +12,15 @@ def train():
     input_dim, train_loader, val_loader = get_loaders()
 
     model = SGR(input_dim).to(device)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)  # Adjusted learning rate
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
     num_epochs = 100
-    best_val_accuracy = 0.0
+    best_val_loss = float('inf')
     patience = 10  # Early stopping patience
     patience_counter = 0
 
@@ -71,9 +72,11 @@ def train():
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
 
+        scheduler.step(val_loss)  # Adjust learning rate based on validation loss
+
         # Early stopping
-        if val_accuracy > best_val_accuracy:
-            best_val_accuracy = val_accuracy
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
             patience_counter = 0
         else:
             patience_counter += 1
