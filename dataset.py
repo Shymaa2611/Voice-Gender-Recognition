@@ -6,11 +6,14 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Step 1: Load data
+# Step 1: Load data with only 'audio' and 'label' columns
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    train_subset = dataset['train'].select(range(5))
-    test_subset = dataset['test'].select(range(2))
+    
+    # Select only 'audio' and 'label' columns
+    train_subset = dataset['train'].select(range(5)).remove_columns([col for col in dataset['train'].column_names if col not in ['audio', 'label']])
+    test_subset = dataset['test'].select(range(2)).remove_columns([col for col in dataset['test'].column_names if col not in ['audio', 'label']])
+    
     subset_dataset = DatasetDict({
         'train': train_subset,
         'test': test_subset
@@ -39,13 +42,13 @@ def extract_wav2vec_features(batch):
     # Return the extracted features as a new column in the dataset
     return {'features': features}
 
-# Step 3: Apply changes and verify features
+# Step 3: Apply changes and ensure dataset contains 'audio', 'label', 'features'
 def apply_change():
     dataset = load_data()
 
-    # Ensure the 'features' column is added to the dataset
+    # Apply feature extraction and keep only the 'audio', 'label', and 'features' columns
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
-
+    
     # Debugging: Check if features are added to the dataset
     print("Columns after feature extraction:", dataset['train'].column_names)
     
@@ -67,7 +70,7 @@ def final_dataset():
     # Map labels to integers
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
     
-    # Debugging: Verify that the 'features' column exists in the final dataset
+    # Debugging: Verify final columns in dataset
     print("Final columns in dataset:", dataset['train'].column_names)
     
     return dataset
