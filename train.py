@@ -10,7 +10,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train():
     input_dim, train_loader, val_loader = get_loaders()
-   
+
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()  # Use BCEWithLogitsLoss for binary classification
     optimizer = optim.Adam(model.parameters(), lr=0.001)
@@ -18,7 +18,7 @@ def train():
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
-    num_epochs = 100  # Adjust as needed
+    num_epochs = 100  # Number of epochs
 
     for epoch in range(num_epochs):
         model.train()
@@ -26,27 +26,22 @@ def train():
         for batch in train_loader:
             X_batch, y_batch = batch['features'], batch['label']
             X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-            
+
             optimizer.zero_grad()
             outputs = model(X_batch)
-            
-            # Ensure target values are binary before loss calculation
-            y_batch = y_batch.float()
-            unique_labels = y_batch.unique()
-            print(f"Batch unique labels: {unique_labels}")
-            assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {unique_labels}"
-            
-            loss = criterion(outputs.view(-1), y_batch)
+
+            # Apply sigmoid for logits if using BCEWithLogitsLoss
+            loss = criterion(outputs.view(-1), y_batch.float())
             loss.backward()
             optimizer.step()
-            
+
             running_loss += loss.item()
-            preds = torch.round(torch.sigmoid(outputs))
+            preds = torch.round(torch.sigmoid(outputs))  # Apply sigmoid for logits
             correct_preds += (preds.view_as(y_batch) == y_batch).sum().item()
 
         train_loss = running_loss / len(train_loader)
         train_accuracy = correct_preds / len(train_loader.dataset)
-        
+
         # Validation phase
         model.eval()
         running_val_loss, val_correct_preds = 0.0, 0
@@ -54,21 +49,21 @@ def train():
             for batch in val_loader:
                 X_batch, y_batch = batch['features'], batch['label']
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
-                y_batch = y_batch.float()
+
                 outputs = model(X_batch)
-                loss = criterion(outputs.view(-1), y_batch)
+                loss = criterion(outputs.view(-1), y_batch.float())
                 running_val_loss += loss.item()
-                preds = torch.round(torch.sigmoid(outputs))
+                preds = torch.round(torch.sigmoid(outputs))  # Apply sigmoid for logits
                 val_correct_preds += (preds.view_as(y_batch) == y_batch).sum().item()
 
         val_loss = running_val_loss / len(val_loader)
         val_accuracy = val_correct_preds / len(val_loader.dataset)
-        
+
         train_losses.append(train_loss)
         val_losses.append(val_loss)
         train_accuracies.append(train_accuracy)
         val_accuracies.append(val_accuracy)
-        
+
         print(f'Epoch [{epoch+1}/{num_epochs}], '
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
