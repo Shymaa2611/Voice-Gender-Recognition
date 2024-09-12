@@ -13,14 +13,14 @@ def train():
 
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0001)  # Adjusted learning rate
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)
+    optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)  # Adjusted learning rate and added weight decay
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5, factor=0.5)  # Learning rate scheduler
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
     num_epochs = 100
-    best_val_loss = float('inf')
+    best_val_loss = float('inf')  # Initialize best_val_loss to a very high value
     patience = 10  # Early stopping patience
     patience_counter = 0
 
@@ -72,7 +72,8 @@ def train():
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
 
-        scheduler.step(val_loss)  # Adjust learning rate based on validation loss
+        # Update learning rate
+        scheduler.step(val_loss)
 
         # Early stopping
         if val_loss < best_val_loss:
@@ -83,7 +84,7 @@ def train():
             if patience_counter >= patience:
                 print("Early stopping triggered.")
                 break
-    
+
     return train_losses, val_losses, train_accuracies, val_accuracies
 
 def training_plots(train_losses, val_losses, train_accuracies, val_accuracies):
