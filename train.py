@@ -12,7 +12,7 @@ def train():
     input_dim, train_loader, val_loader = get_loaders()
 
     model = SGR(input_dim).to(device)
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)  # Adjusted learning rate
 
     train_losses, val_losses = [], []
