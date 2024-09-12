@@ -50,14 +50,13 @@ def label_to_int(batch, label_to_id):
 def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
-
     return dataset
 
 class AudioDataset(Dataset):
     def __init__(self, data):
-        # Ensuring that features and labels are correctly assigned
+        # Ensure the data has the correct structure
         if 'features' in data.column_names:
-            self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
+            self.features = torch.tensor(data['features'], dtype=torch.float32)
         else:
             raise KeyError("'features' column is missing in the dataset.")
         
@@ -66,7 +65,7 @@ class AudioDataset(Dataset):
         else:
             raise KeyError("'label' column is missing in the dataset.")
         
-        # Ensure feature and label lengths match
+        # Check if feature and label lengths match
         assert len(self.features) == len(self.labels), f"Feature and label sizes do not match: {len(self.features)} != {len(self.labels)}"
     
     def __len__(self):
@@ -96,3 +95,4 @@ def get_loaders(batch_size=32):
     
     input_dim = train_data.features.shape[1]
     return input_dim, train_loader, test_loader
+
