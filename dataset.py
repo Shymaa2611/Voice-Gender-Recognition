@@ -58,6 +58,12 @@ def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
     
+    # Debug: Print unique labels to ensure they're binary
+    unique_labels_train = set(dataset['train']['label'])
+    unique_labels_test = set(dataset['test']['label'])
+    print(f"Unique labels in training set: {unique_labels_train}")
+    print(f"Unique labels in test set: {unique_labels_test}")
+
     return dataset
 
 class AudioDataset(Dataset):

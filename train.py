@@ -1,21 +1,23 @@
 import torch
+import torch.nn as nn
+import torch.optim as optim
 import matplotlib.pyplot as plt
-from args import *
-from utils import save_checkpoint
 import os
+from args import *  # Make sure to define or import `SGR`, `save_checkpoint`, etc.
+from utils import save_checkpoint
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# Ensure that the model is defined and moved to the correct device
-model = SGR(input_dim).to(device)  # Update 'SGR' and 'input_dim' as needed
 
 def train():
     input_dim, train_loader, val_loader = get_loaders()
    
+    model = SGR(input_dim).to(device)
+    criterion = nn.BCEWithLogitsLoss()  # Use BCEWithLogitsLoss for binary classification
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
-    
+
     num_epochs = 10  # Adjust as needed
 
     for epoch in range(num_epochs):
@@ -32,13 +34,13 @@ def train():
             y_batch = y_batch.float()
             assert (y_batch >= 0).all() and (y_batch <= 1).all(), "Labels should be between 0 and 1"
             
-            loss = criterion(outputs, y_batch.view(-1, 1))
+            loss = criterion(outputs.view(-1), y_batch)
             loss.backward()
             optimizer.step()
             
             running_loss += loss.item()
-            preds = torch.round(outputs)
-            correct_preds += (preds == y_batch.view_as(preds)).sum().item()
+            preds = torch.round(torch.sigmoid(outputs))
+            correct_preds += (preds.view_as(y_batch) == y_batch).sum().item()
 
         train_loss = running_loss / len(train_loader)
         train_accuracy = correct_preds / len(train_loader.dataset)
@@ -56,10 +58,10 @@ def train():
                 assert (y_batch >= 0).all() and (y_batch <= 1).all(), "Labels should be between 0 and 1"
                 
                 outputs = model(X_batch)
-                loss = criterion(outputs, y_batch.view(-1, 1))
+                loss = criterion(outputs.view(-1), y_batch)
                 running_val_loss += loss.item()
-                preds = torch.round(outputs)
-                val_correct_preds += (preds == y_batch.view_as(preds)).sum().item()
+                preds = torch.round(torch.sigmoid(outputs))
+                val_correct_preds += (preds.view_as(y_batch) == y_batch).sum().item()
 
         val_loss = running_val_loss / len(val_loader)
         val_accuracy = val_correct_preds / len(val_loader.dataset)
@@ -73,7 +75,6 @@ def train():
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
-
 
 def training_plots():
     save_path = os.path.join('media', 'training_plot.png')
@@ -97,7 +98,6 @@ def training_plots():
     plt.savefig(save_path)  
     plt.show()
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     train()
     training_plots()
