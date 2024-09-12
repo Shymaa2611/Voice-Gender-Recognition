@@ -4,8 +4,8 @@ class SGR(nn.Module):
     def __init__(self, input_dim):
         super(SGR, self).__init__()
         self.model = nn.Sequential(
-            nn.BatchNorm1d(input_dim),
             nn.Linear(input_dim, 100),
+            nn.BatchNorm1d(100),  # Batch normalization applied after first linear layer
             nn.ReLU(),
             nn.Dropout(0.5),
             nn.Linear(100, 200),
