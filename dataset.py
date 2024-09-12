@@ -8,8 +8,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  
-    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  
+    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # Selecting only 5 samples for quick testing
+    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  # Selecting only 2 samples for quick testing
     
     subset_dataset = DatasetDict({
         'train': train_subset,
@@ -35,17 +35,12 @@ def extract_wav2vec_features(batch):
         feature = outputs.last_hidden_state.mean(dim=1).cpu().numpy()
         features.append(feature)
     
-    # Convert features to a numpy array for consistency
     features_array = np.vstack(features)
     return {'features': features_array}
 
 def apply_change():
     dataset = load_data()
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
-    
-    # Debugging: Verify columns and data after feature extraction
-    print("Columns after feature extraction:", dataset['train'].column_names)
-    print("First few rows of data after feature extraction:", dataset['train'][:5])
     
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
@@ -60,8 +55,6 @@ def label_to_int(batch, label_to_id):
 def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
-    print("Final columns in dataset:", dataset['train'].column_names)
-    print("First few rows of final dataset:", dataset['train'][:5])
     
     return dataset
 
@@ -92,4 +85,3 @@ def get_loaders():
     test_loader = DataLoader(test_data, batch_size=32)
     input_dim = train_data.features.shape[1]  # Get the feature dimension
     return input_dim, train_loader, test_loader
-
