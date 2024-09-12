@@ -14,7 +14,7 @@ def train():
 
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=0.0001)  # Changed to AdamW
+    optimizer = optim.AdamW(model.parameters(), lr=0.001)  # Changed to AdamW
     scheduler = ReduceLROnPlateau(optimizer, 'min', patience=5, verbose=True)
 
     train_losses, val_losses = [], []
