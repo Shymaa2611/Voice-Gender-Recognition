@@ -18,7 +18,7 @@ def train():
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
-    num_epochs = 10  # Adjust as needed
+    num_epochs = 100  # Adjust as needed
 
     for epoch in range(num_epochs):
         model.train()
