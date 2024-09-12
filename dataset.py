@@ -48,8 +48,10 @@ def apply_change():
     return label_to_id, dataset
 
 def label_to_int(batch, label_to_id):
-    unknown_label = -1  
+    unknown_label = -1
     batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
+    # Ensure labels are binary
+    batch['label'] = [1 if l > 0 else 0 for l in batch['label']]
     return batch
 
 def final_dataset():

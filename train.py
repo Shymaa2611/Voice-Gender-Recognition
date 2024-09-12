@@ -10,6 +10,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = SGR(input_dim).to(device)  # Update 'SGR' and 'input_dim' as needed
 
 def train():
+    input_dim, train_loader, val_loader = get_loaders()
+   
+
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
     
@@ -24,7 +27,12 @@ def train():
             
             optimizer.zero_grad()
             outputs = model(X_batch)
-            loss = criterion(outputs, y_batch.view(-1, 1).float())
+            
+            # Ensure target values are binary before loss calculation
+            y_batch = y_batch.float()
+            assert (y_batch >= 0).all() and (y_batch <= 1).all(), "Labels should be between 0 and 1"
+            
+            loss = criterion(outputs, y_batch.view(-1, 1))
             loss.backward()
             optimizer.step()
             
@@ -43,8 +51,12 @@ def train():
                 X_batch, y_batch = batch['features'], batch['label']
                 X_batch, y_batch = X_batch.to(device), y_batch.to(device)
                 
+                # Ensure target values are binary before loss calculation
+                y_batch = y_batch.float()
+                assert (y_batch >= 0).all() and (y_batch <= 1).all(), "Labels should be between 0 and 1"
+                
                 outputs = model(X_batch)
-                loss = criterion(outputs, y_batch.view(-1, 1).float())
+                loss = criterion(outputs, y_batch.view(-1, 1))
                 running_val_loss += loss.item()
                 preds = torch.round(outputs)
                 val_correct_preds += (preds == y_batch.view_as(preds)).sum().item()
@@ -61,6 +73,7 @@ def train():
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
+
 
 def training_plots():
     save_path = os.path.join('media', 'training_plot.png')
