@@ -8,10 +8,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    
-    # Select only 'audio' and 'label' columns and remove the 'id' column
-    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # Select only 5 rows for training
-    test_subset = dataset['test'].remove_columns(['id']).select(range(2))   # Select only 2 rows for testing
+    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  
+    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  
     
     subset_dataset = DatasetDict({
         'train': train_subset,
@@ -62,8 +60,6 @@ def label_to_int(batch, label_to_id):
 def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
-    
-    # Debugging: Verify final columns in dataset
     print("Final columns in dataset:", dataset['train'].column_names)
     print("First few rows of final dataset:", dataset['train'][:5])
     
@@ -71,17 +67,11 @@ def final_dataset():
 
 class AudioDataset(Dataset):
     def __init__(self, data):
-        # Debugging: Print column names and the first few rows of data
-        print("Dataset columns:", data.column_names)
-        print("First few rows of data:", data[:5])
-        
-        # Ensure 'features' column exists and stack features into tensor
         if 'features' in data.column_names:
             self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
         else:
             raise KeyError("'features' column is missing in the dataset.")
         
-        # Ensure 'label' column exists
         if 'label' in data.column_names:
             self.labels = torch.tensor(data['label'], dtype=torch.long)
         else:
@@ -103,9 +93,3 @@ def get_loaders():
     input_dim = train_data.features.shape[1]  # Get the feature dimension
     return input_dim, train_loader, test_loader
 
-# Example usage
-if __name__ == "__main__":
-    input_dim, train_loader, test_loader = get_loaders()
-    print("Input dimension:", input_dim)
-    print("Number of training batches:", len(train_loader))
-    print("Number of test batches:", len(test_loader))
