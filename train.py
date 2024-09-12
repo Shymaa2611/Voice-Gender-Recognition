@@ -12,13 +12,13 @@ def train():
     input_dim, train_loader, val_loader = get_loaders()
 
     model = SGR(input_dim).to(device)
-    criterion = nn.BCEWithLogitsLoss()  # Use BCEWithLogitsLoss for binary classification
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
-    num_epochs = 100  # Number of epochs
+    num_epochs = 10
 
     for epoch in range(num_epochs):
         model.train()
@@ -67,18 +67,7 @@ def train():
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
-
-        # Debugging: Print a sample of predictions and labels
-        if epoch % 10 == 0:
-            model.eval()
-            with torch.no_grad():
-                sample_batch = next(iter(val_loader))
-                X_sample, y_sample = sample_batch['features'].to(device), sample_batch['label'].to(device)
-                outputs = model(X_sample)
-                preds = torch.round(torch.sigmoid(outputs))
-                print(f"Sample Predictions: {preds.cpu().numpy()}")
-                print(f"Sample Labels: {y_sample.cpu().numpy()}")
-
+    
 
 def training_plots():
     save_path = os.path.join('media', 'training_plot.png')
