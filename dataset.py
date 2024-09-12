@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from datasets import load_dataset,DatasetDict
+from datasets import load_dataset, DatasetDict
 from transformers import Wav2Vec2Processor, Wav2Vec2Model
 import numpy as np
 
@@ -11,10 +11,9 @@ def load_data():
     train_subset = dataset['train'].select(range(5))
     test_subset = dataset['test'].select(range(2))
     subset_dataset = DatasetDict({
-    'train': train_subset,
-    'test': test_subset
+        'train': train_subset,
+        'test': test_subset
     })
-
     return subset_dataset
 
 def extract_wav2vec_features(batch):
@@ -65,7 +64,11 @@ def final_dataset():
 
 class AudioDataset(Dataset):
     def __init__(self, data):
-        self.features = torch.tensor(data['features'], dtype=torch.float32)
+        # Add a check for the features column
+        if 'features' in data:
+            self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
+        else:
+            raise KeyError("'features' column is missing in the dataset.")
         self.labels = torch.tensor(data['label'], dtype=torch.long)
         
     def __len__(self):
