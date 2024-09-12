@@ -13,7 +13,7 @@ def train():
 
     model = SGR(input_dim).to(device)
     criterion = nn.BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=1e-5)
 
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
