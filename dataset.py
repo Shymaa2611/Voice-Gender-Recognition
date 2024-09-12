@@ -7,9 +7,11 @@ import numpy as np
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
+    # Load the dataset
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # Selecting only 5 samples for quick testing
-    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  # Selecting only 2 samples for quick testing
+    # Select a small subset for quick testing
+    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # 5 samples
+    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  # 2 samples
     
     subset_dataset = DatasetDict({
         'train': train_subset,
@@ -18,6 +20,7 @@ def load_data():
     return subset_dataset
 
 def extract_wav2vec_features(batch):
+    # Initialize processor and model
     processor = Wav2Vec2Processor.from_pretrained("facebook/wav2vec2-base")
     model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-base").to(device)
 
@@ -41,13 +44,17 @@ def extract_wav2vec_features(batch):
 def apply_change():
     dataset = load_data()
     dataset = dataset.map(extract_wav2vec_features, batched=True, batch_size=8)
+    
+    # Map labels to integers
     label_list = sorted(set(dataset['train']['label']))
-    label_to_id = {label: idx for idx, label in enumerate(label_list)}    
+    label_to_id = {label: idx for idx, label in enumerate(label_list)}
+    
     return label_to_id, dataset
 
 def label_to_int(batch, label_to_id):
+    # Convert labels to integers and adjust based on use case
     batch['label'] = [label_to_id.get(label, -1) for label in batch['label']]
-    batch['label'] = [1 if l > 0 else 0 for l in batch['label']]
+    batch['label'] = [1 if l == 1 else 0 for l in batch['label']]
     return batch
 
 def final_dataset():
@@ -80,5 +87,5 @@ def get_loaders():
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32)
-    input_dim = train_data.features.shape[1]  # Get the feature dimension
+    input_dim = train_data.features.shape[1]  # Feature dimension
     return input_dim, train_loader, test_loader
