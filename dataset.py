@@ -8,7 +8,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    return dataset
+    train_subset = dataset['train'].select(range(5))
+    test_subset = dataset['test'].select(range(2))
+    subset_dataset = DatasetDict({
+        'train': train_subset,
+        'test': test_subset
+    })
+    return subset_dataset
 
 def extract_mfcc_features(batch):
     features = []
