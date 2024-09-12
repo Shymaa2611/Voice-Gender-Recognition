@@ -9,15 +9,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def load_data():
     # Load the dataset
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
-    # Select a small subset for quick testing
-    train_subset = dataset['train'].remove_columns(['id']).select(range(5))  # 5 samples
-    test_subset = dataset['test'].remove_columns(['id']).select(range(2))  # 2 samples
     
-    subset_dataset = DatasetDict({
-        'train': train_subset,
-        'test': test_subset
-    })
-    return subset_dataset
+    return dataset
 
 def extract_wav2vec_features(batch):
     # Initialize processor and model
