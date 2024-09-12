@@ -4,25 +4,30 @@ from args import *
 from utils import save_checkpoint
 import os
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = model.to(device)
+# Ensure that the model is defined and moved to the correct device
+model = SGR(input_dim).to(device)  # Update 'SGR' and 'input_dim' as needed
 
 def train():
     for epoch in range(num_epochs):
         model.train()
         running_loss, correct_preds = 0.0, 0
         for X_batch, y_batch in train_loader:
+            X_batch, y_batch = X_batch.to(device), y_batch.to(device)  # Move data to device
             optimizer.zero_grad()
             outputs = model(X_batch)
-            loss = criterion(outputs, y_batch.view(-1, 1))
+            
+            # Check shapes
+            assert outputs.shape == y_batch.shape, f"Output shape {outputs.shape} does not match target shape {y_batch.shape}"
+            
+            loss = criterion(outputs.squeeze(), y_batch.float())  # Adjust if needed
             loss.backward()
             optimizer.step()
             
             running_loss += loss.item()
-            preds = torch.round(outputs)
-            correct_preds += (preds == y_batch.view_as(preds)).sum().item()
+            preds = (outputs.squeeze() > 0.5).float()  # Binary classification
+            correct_preds += (preds == y_batch).sum().item()
 
         train_loss = running_loss / len(train_loader)
         train_accuracy = correct_preds / len(train_loader.dataset)
@@ -32,11 +37,16 @@ def train():
         running_val_loss, val_correct_preds = 0.0, 0
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
+                X_batch, y_batch = X_batch.to(device), y_batch.to(device)  # Move data to device
                 outputs = model(X_batch)
-                loss = criterion(outputs, y_batch.view(-1, 1))
+                
+                # Check shapes
+                assert outputs.shape == y_batch.shape, f"Output shape {outputs.shape} does not match target shape {y_batch.shape}"
+                
+                loss = criterion(outputs.squeeze(), y_batch.float())  # Adjust if needed
                 running_val_loss += loss.item()
-                preds = torch.round(outputs)
-                val_correct_preds += (preds == y_batch.view_as(preds)).sum().item()
+                preds = (outputs.squeeze() > 0.5).float()  # Binary classification
+                val_correct_preds += (preds == y_batch).sum().item()
 
         val_loss = running_val_loss / len(val_loader)
         val_accuracy = val_correct_preds / len(val_loader.dataset)
