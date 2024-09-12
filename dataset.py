@@ -17,9 +17,8 @@ def extract_mfcc_features(batch):
         sampling_rate = audio_dict['sampling_rate']
         
         # Extract MFCC features using librosa
-        mfccs = librosa.feature.mfcc(y=waveform, sr=sampling_rate, n_mfcc=13)  # Adjust n_mfcc as needed
-        # Transpose features to have shape (frames, n_mfcc)
-        mfccs = mfccs.T
+        mfccs = librosa.feature.mfcc(y=waveform, sr=sampling_rate, n_mfcc=13)
+        mfccs = mfccs.T  # Transpose features to have shape (frames, n_mfcc)
         
         # Determine the maximum length for padding/truncating
         max_length = 160  # Adjust this length as needed
@@ -41,7 +40,6 @@ def apply_change():
     dataset = dataset.map(extract_mfcc_features, batched=True, batch_size=8)
     label_list = sorted(set(dataset['train']['label']))
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
-    
     return label_to_id, dataset
 
 def label_to_int(batch, label_to_id):
@@ -52,7 +50,18 @@ def label_to_int(batch, label_to_id):
 def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
-    return dataset
+
+    # Take 5 samples from training and 2 samples from test
+    train_subset = dataset['train'].select(range(min(5, len(dataset['train']))))
+    test_subset = dataset['test'].select(range(min(2, len(dataset['test']))))
+
+    # Create new DatasetDict with the smaller subsets
+    subset_dataset = DatasetDict({
+        'train': train_subset,
+        'test': test_subset
+    })
+
+    return subset_dataset
 
 class AudioDataset(Dataset):
     def __init__(self, data):
@@ -70,14 +79,22 @@ class AudioDataset(Dataset):
         return len(self.features)
     
     def __getitem__(self, idx):
-        return {'features': self.features[idx].to(device),
-                'label': self.labels[idx].to(device)}
+        if idx >= len(self.features):
+            raise IndexError(f"Index {idx} is out of bounds for dataset of size {len(self.features)}")
+        return {
+            'features': self.features[idx].to(device),
+            'label': self.labels[idx].to(device)
+        }
 
 def get_loaders():
     dataset = final_dataset()
     train_data = AudioDataset(dataset['train'])
     test_data = AudioDataset(dataset['test'])
-    train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
-    test_loader = DataLoader(test_data, batch_size=32)
-    input_dim = train_data.features.shape[1] 
+    
+    # Adjust batch size according to the small dataset size (5 for train, 2 for test)
+    train_loader = DataLoader(train_data, batch_size=5, shuffle=True)
+    test_loader = DataLoader(test_data, batch_size=2)
+    
+    input_dim = train_data.features.shape[1]
     return input_dim, train_loader, test_loader
+
