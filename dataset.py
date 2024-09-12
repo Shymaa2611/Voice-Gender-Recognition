@@ -7,7 +7,6 @@ import librosa
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_data():
-    # Load the entire dataset
     dataset = load_dataset("7wolf/gender-balanced-10k-voice-samples")
     return dataset
 
@@ -52,16 +51,11 @@ def final_dataset():
     label_to_id, dataset = apply_change()
     dataset = dataset.map(lambda batch: label_to_int(batch, label_to_id), batched=True)
 
-    # Use the entire dataset for both training and testing
-    full_dataset = DatasetDict({
-        'train': dataset['train'],
-        'test': dataset['test']
-    })
-
-    return full_dataset
+    return dataset
 
 class AudioDataset(Dataset):
     def __init__(self, data):
+        # Ensuring that features and labels are correctly assigned
         if 'features' in data.column_names:
             self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
         else:
@@ -72,11 +66,14 @@ class AudioDataset(Dataset):
         else:
             raise KeyError("'label' column is missing in the dataset.")
         
+        # Ensure feature and label lengths match
+        assert len(self.features) == len(self.labels), f"Feature and label sizes do not match: {len(self.features)} != {len(self.labels)}"
+    
     def __len__(self):
-        return len(self.features)
+        return len(self.features)  # Ensure correct dataset size
     
     def __getitem__(self, idx):
-        if idx >= len(self.features):
+        if idx >= len(self.features):  # Check for valid index
             raise IndexError(f"Index {idx} is out of bounds for dataset of size {len(self.features)}")
         return {
             'features': self.features[idx].to(device),
@@ -85,10 +82,15 @@ class AudioDataset(Dataset):
 
 def get_loaders(batch_size=32):
     dataset = final_dataset()
+    
+    # Create AudioDataset instances for training and testing data
     train_data = AudioDataset(dataset['train'])
     test_data = AudioDataset(dataset['test'])
     
-    # Adjust batch size for entire dataset
+    print(f"Training set size: {len(train_data)}")
+    print(f"Test set size: {len(test_data)}")
+    
+    # Create DataLoader for both train and test datasets
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size)
     
