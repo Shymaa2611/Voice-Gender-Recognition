@@ -32,7 +32,9 @@ def train():
             
             # Ensure target values are binary before loss calculation
             y_batch = y_batch.float()
-            assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {y_batch.unique()}"
+            unique_labels = y_batch.unique()
+            print(f"Batch unique labels: {unique_labels}")
+            assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {unique_labels}"
             
             loss = criterion(outputs.view(-1), y_batch)
             loss.backward()
@@ -55,7 +57,9 @@ def train():
                 
                 # Ensure target values are binary before loss calculation
                 y_batch = y_batch.float()
-                assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {y_batch.unique()}"
+                unique_labels = y_batch.unique()
+                print(f"Validation batch unique labels: {unique_labels}")
+                assert (y_batch >= 0).all() and (y_batch <= 1).all(), f"Labels should be between 0 and 1. Found: {unique_labels}"
                 
                 outputs = model(X_batch)
                 loss = criterion(outputs.view(-1), y_batch)
