@@ -4,11 +4,9 @@ from args import *
 from utils import save_checkpoint
 import os
 
-# Check if GPU is available and define the device
+
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Assuming `model`, `optimizer`, `criterion`, `train_loader`, and `val_loader` are defined
-# Make sure to move the model to the correct device
 model = model.to(device)
 
 def train():
@@ -16,10 +14,6 @@ def train():
         model.train()
         running_loss, correct_preds = 0.0, 0
         for X_batch, y_batch in train_loader:
-            # Move data to the appropriate device
-            X_batch = X_batch.to(device).float()
-            y_batch = y_batch.to(device).float()
-
             optimizer.zero_grad()
             outputs = model(X_batch)
             loss = criterion(outputs, y_batch.view(-1, 1))
@@ -38,10 +32,6 @@ def train():
         running_val_loss, val_correct_preds = 0.0, 0
         with torch.no_grad():
             for X_batch, y_batch in val_loader:
-                # Move validation data to the correct device
-                X_batch = X_batch.to(device).float()
-                y_batch = y_batch.to(device).float()
-
                 outputs = model(X_batch)
                 loss = criterion(outputs, y_batch.view(-1, 1))
                 running_val_loss += loss.item()
