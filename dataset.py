@@ -75,6 +75,9 @@ def final_dataset():
 
 class AudioDataset(Dataset):
     def __init__(self, data):
+        # Debugging: Print data structure
+        print("Data sample:", data)
+        
         # Ensure 'features' column exists
         if 'features' in data:
             self.features = torch.tensor(np.vstack(data['features']), dtype=torch.float32)
@@ -96,6 +99,10 @@ class AudioDataset(Dataset):
 
 def get_loaders():
     dataset = final_dataset()
+    
+    # Debugging: Print dataset structure before creating loaders
+    print("Dataset sample:", dataset['train'][0])
+    
     train_data = AudioDataset(dataset['train'])
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
