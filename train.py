@@ -68,9 +68,14 @@ def train():
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
     
+    return train_losses, val_losses, train_accuracies, val_accuracies
 
-def training_plots():
+def training_plots(train_losses, val_losses, train_accuracies, val_accuracies):
     save_path = os.path.join('media', 'training_plot.png')
+    
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    
     plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
     plt.plot(train_losses, label='Train Loss')
@@ -79,6 +84,7 @@ def training_plots():
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
+    
     # Plotting Accuracy
     plt.subplot(1, 2, 2) 
     plt.plot(train_accuracies, label='Train Accuracy')
@@ -87,10 +93,11 @@ def training_plots():
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
+    
     plt.tight_layout()
     plt.savefig(save_path)  
     plt.show()
 
 if __name__ == "__main__":
-    train()
-    training_plots()
+    train_losses, val_losses, train_accuracies, val_accuracies = train()
+    training_plots(train_losses, val_losses, train_accuracies, val_accuracies)
