@@ -30,7 +30,6 @@ def train():
             optimizer.zero_grad()
             outputs = model(X_batch)
 
-            # Apply sigmoid for logits if using BCEWithLogitsLoss
             loss = criterion(outputs.view(-1), y_batch.float())
             loss.backward()
             optimizer.step()
@@ -68,6 +67,18 @@ def train():
               f'Train Loss: {train_loss:.4f}, Train Acc: {train_accuracy:.4f}, '
               f'Val Loss: {val_loss:.4f}, Val Acc: {val_accuracy:.4f}')
         save_checkpoint(epoch, model, optimizer, train_losses, val_losses, train_accuracies, val_accuracies)
+
+        # Debugging: Print a sample of predictions and labels
+        if epoch % 10 == 0:
+            model.eval()
+            with torch.no_grad():
+                sample_batch = next(iter(val_loader))
+                X_sample, y_sample = sample_batch['features'].to(device), sample_batch['label'].to(device)
+                outputs = model(X_sample)
+                preds = torch.round(torch.sigmoid(outputs))
+                print(f"Sample Predictions: {preds.cpu().numpy()}")
+                print(f"Sample Labels: {y_sample.cpu().numpy()}")
+
 
 def training_plots():
     save_path = os.path.join('media', 'training_plot.png')
