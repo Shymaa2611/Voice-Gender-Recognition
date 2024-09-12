@@ -38,18 +38,13 @@ def apply_change():
     dataset = load_data()
     dataset = dataset.map(extract_wav2vec_features, batched=True)
     label_list = sorted(set(dataset['train']['label']))
-    print(f"Unique labels in the dataset: {label_list}")  # Debugging line
     label_to_id = {label: idx for idx, label in enumerate(label_list)}
     return label_to_id
 
 def label_to_int(batch):
     label_to_id = apply_change()
-    print(f"Label to ID mapping: {label_to_id}")  # Debugging line
-    
-    # Handle cases where batch['label'] might not be iterable
-    unknown_label = -1  # Define a value for unknown labels
+    unknown_label = -1  
     if isinstance(batch['label'], list):
-        # Handle labels that may not be in label_to_id
         batch['label'] = [label_to_id.get(label, unknown_label) for label in batch['label']]
     else:
         batch['label'] = label_to_id.get(batch['label'], unknown_label)
@@ -79,5 +74,5 @@ def get_loaders():
     test_data = AudioDataset(dataset['test'])
     train_loader = DataLoader(train_data, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=32)
-    dim = 54614  # Assuming this is the correct dimension
+    dim = 54614  
     return dim, train_loader, test_loader
