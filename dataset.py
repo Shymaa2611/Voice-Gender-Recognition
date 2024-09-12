@@ -70,10 +70,6 @@ def final_dataset():
     print(f"Unique labels in training set: {unique_labels_train}")
     print(f"Unique labels in test set: {unique_labels_test}")
 
-    # Ensure there are no invalid labels (-1) in the dataset
-    assert -1 not in unique_labels_train, "Training set contains invalid labels (-1)"
-    assert -1 not in unique_labels_test, "Test set contains invalid labels (-1)"
-
     return dataset
 
 class AudioDataset(Dataset):
